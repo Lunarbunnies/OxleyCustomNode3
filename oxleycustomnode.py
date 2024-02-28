@@ -8,7 +8,7 @@ class OxleyCustomNode:
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image_out",)
     FUNCTION = "invert"
-    CATEGORY = "examples"
+    CATEGORY = "utils"
 
     def invert(self, image_in):
         image_out = 1 - image_in
