@@ -1,5 +1,8 @@
 import requests
 from io import BytesIO
+from PIL import Image
+import numpy as np
+import torch  # Import torch
 
 class OxleyCustomNode:
     @classmethod
@@ -16,7 +19,6 @@ class OxleyCustomNode:
     def invert(self, image_in):
         image_out = 1 - image_in
         return (image_out,)
-
 
 class OxleyDownloadImageNode:
     @classmethod
@@ -38,10 +40,21 @@ class OxleyDownloadImageNode:
         # Raise an exception if the request was unsuccessful
         response.raise_for_status()
 
-        # Convert the response content into a bytes-like object
-        image_bytes = BytesIO(response.content)
+        # Open the image using Pillow
+        image = Image.open(BytesIO(response.content))
+        
+        # Convert the image to RGB format to ensure consistency
+        image = image.convert("RGB")
 
-        # Depending on your environment's way of handling images,
-        # you might directly return the bytes, or you might need
-        # to convert this to your environment's image format.
-        return (image_bytes,)
+        # Convert the image to a NumPy array and normalize it
+        image_array = np.array(image).astype(np.float32) / 255.0
+
+        # Convert the NumPy array to a PyTorch tensor
+        image_tensor = torch.from_numpy(image_array)
+        
+        # Adjust the dimensions from (H, W, C) to (C, H, W) to match PyTorch's expectations
+        image_tensor = image_tensor.permute(2, 0, 1)
+
+        # Return the PyTorch tensor
+        # Depending on your environment, you might need to adjust this return value
+        return (image_tensor,)
