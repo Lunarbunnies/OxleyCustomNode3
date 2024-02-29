@@ -43,7 +43,7 @@ class OxleyDownloadImageNode:
         # Open the image using Pillow
         image = Image.open(BytesIO(response.content))
         
-        # Convert the image to RGB format to ensure consistency
+        # Convert the image to RGB format
         image = image.convert("RGB")
 
         # Convert the image to a NumPy array and normalize it
@@ -51,10 +51,9 @@ class OxleyDownloadImageNode:
 
         # Convert the NumPy array to a PyTorch tensor
         image_tensor = torch.from_numpy(image_array)
-        
-        # Adjust the dimensions from (H, W, C) to (C, H, W) to match PyTorch's expectations
-        image_tensor = image_tensor.permute(2, 0, 1)
 
-        # Return the PyTorch tensor
-        # Depending on your environment, you might need to adjust this return value
+        # Add a new batch dimension at the beginning
+        image_tensor = image_tensor[None,]
+
+        # Return the PyTorch tensor with the batch dimension added
         return (image_tensor,)
