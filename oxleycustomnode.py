@@ -57,3 +57,9 @@ class OxleyDownloadImageNode:
 
         # Return the PyTorch tensor with the batch dimension added
         return (image_tensor,)
+
+    @classmethod
+    def IS_CHANGED(cls, url):
+        # Always returns a unique value to force the node to be re-executed, e.g. returning a timestamp
+        from datetime import datetime
+        return datetime.now().isoformat()
