@@ -4,6 +4,51 @@ from PIL import Image
 import numpy as np
 import torch  # Import torch
 
+import asyncio
+import websockets
+import json
+
+class OxleyWebsocketDownloadImageNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": { "ws_url" : ("STRING", {}) },  # WebSocket URL to connect to
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image_out",)
+    FUNCTION = "download_image_ws"
+    CATEGORY = "oxley"
+
+    async def download_image_async(self, ws_url):
+        async with websockets.connect(ws_url) as websocket:
+            message = await websocket.recv()
+            data = json.loads(message)
+            if "image" in data:
+                image_data = base64.b64decode(data["image"].split(",")[1])
+                return Image.open(BytesIO(image_data))
+            else:
+                raise ValueError("No image data found in the received message")
+
+    def download_image_ws(self, ws_url):
+        # Run the asynchronous download_image_async function and wait for it to complete
+        loop = asyncio.get_event_loop()
+        image = loop.run_until_complete(self.download_image_async(ws_url))
+        
+        # Process the image similar to OxleyDownloadImageNode
+        image = image.convert("RGB")
+        image_array = np.array(image).astype(np.float32) / 255.0
+        image_tensor = torch.from_numpy(image_array)
+        image_tensor = image_tensor[None,]  # Add batch dimension
+        
+        return (image_tensor,)
+
+    @classmethod
+    def IS_CHANGED(cls, ws_url):
+        # Implement appropriate logic to determine if the node should re-execute, e.g., based on WebSocket URL changes
+        from datetime import datetime
+        return datetime.now().isoformat()
+
 class OxleyCustomNode:
     @classmethod
     def INPUT_TYPES(cls):
