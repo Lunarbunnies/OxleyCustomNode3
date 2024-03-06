@@ -17,6 +17,7 @@ import numpy as np
 import torch  # Import torch
 import websocket
 import json
+from json.decoder import JSONDecodeError
 import base64
 
 class OxleyWebsocketDownloadImageNode:
