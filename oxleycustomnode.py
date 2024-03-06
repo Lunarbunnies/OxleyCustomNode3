@@ -1,3 +1,15 @@
+import sys
+import os
+
+# Get the directory of the current script
+current_script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the path to the external_packages directory
+external_packages_path = os.path.join(current_script_dir, 'external_packages')
+
+# Add this path to sys.path
+sys.path.append(external_packages_path)
+
 import requests
 from io import BytesIO
 from PIL import Image
