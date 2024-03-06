@@ -39,14 +39,28 @@ class OxleyWebsocketDownloadImageNode:
         message = ws.recv()
         ws.close()  # Close the connection once the message is received
 
-        # Process the received message
-        data = json.loads(message)
+        try:
+            # Attempt to parse the message as JSON
+            data = json.loads(message)
+        except JSONDecodeError:
+            # Handle cases where the message is not valid JSON
+            print(f"Received non-JSON message: {message}")
+            return None
+    
         if "image" in data:
-            # Decode the Base64 image data
-            image_data = base64.b64decode(data["image"].split(",")[1])
-            image = Image.open(BytesIO(image_data))
+            # Process the message assuming it contains an 'image' field encoded in Base64
+            try:
+                # Decode the Base64 image data
+                image_data = base64.b64decode(data["image"].split(",")[1])
+                image = Image.open(BytesIO(image_data))
+            except Exception as e:
+                # Handle potential errors in decoding or opening the image
+                print(f"Error processing image data: {e}")
+                return None
         else:
-            raise ValueError("No image data found in the received message")
+            # Handle cases where the expected 'image' field is not found in the JSON
+            print("No image data found in the received message")
+            return None
 
         # Convert the image to RGB format
         image = image.convert("RGB")
