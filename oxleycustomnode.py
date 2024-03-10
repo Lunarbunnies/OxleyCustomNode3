@@ -84,6 +84,58 @@ class OxleyWebsocketDownloadImageNode:
         from datetime import datetime
         return datetime.now().isoformat()
 
+class OxleyWebsocketReceiveJsonNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "ws_url": ("STRING", {}),  # WebSocket URL to connect to
+                "fields": ("LIST_STRING", {})  # List of fields to extract from the JSON
+            },
+        }
+
+    RETURN_TYPES = ("DICT_STRING",)  # Assuming output as string might be sufficient
+    RETURN_NAMES = ("json_out",)
+    FUNCTION = "receive_json_ws"
+    CATEGORY = "oxley"
+
+    def receive_json_ws(self, ws_url, fields):
+        # Initialize the WebSocket client and connect to the server
+        ws = websocket.create_connection(ws_url)
+
+        # Receive a message
+        message = ws.recv()
+        ws.close()  # Close the connection once the message is received
+
+        try:
+            # Attempt to parse the message as JSON
+            data = json.loads(message)
+        except JSONDecodeError:
+            # Handle cases where the message is not valid JSON
+            print(f"Received non-JSON message: {message}")
+            return None
+
+        # Initialize an empty dictionary for the output
+        output_data = {}
+
+        # Extract specified fields from the JSON data
+        for field in fields:
+            if field in data:
+                # Add the field value to the output dictionary, convert to string if necessary
+                output_data[field] = str(data[field])
+            else:
+                print(f"Field '{field}' not found in the received message")
+
+        # Return the extracted data
+        return (output_data,)
+
+    @classmethod
+    def IS_CHANGED(cls, ws_url, fields):
+        # Logic to determine if the node should re-execute, potentially based on WebSocket URL changes or fields list changes
+        from datetime import datetime
+        return datetime.now().isoformat()
+
+
 class OxleyCustomNode:
     @classmethod
     def INPUT_TYPES(cls):
