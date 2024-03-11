@@ -21,6 +21,22 @@ from json.decoder import JSONDecodeError
 import base64
 
 class OxleyWebsocketDownloadImageNode:
+    ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
+
+    @classmethod
+    def get_connection(cls, ws_url):
+        """Get an existing WebSocket connection or create a new one."""
+        if ws_url not in cls.ws_connections:
+            cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
+        return cls.ws_connections[ws_url]
+
+    @classmethod
+    def close_connection(cls, ws_url):
+        """Close and remove a WebSocket connection."""
+        if ws_url in cls.ws_connections:
+            cls.ws_connections[ws_url].close()
+            del cls.ws_connections[ws_url]
+    
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -33,13 +49,13 @@ class OxleyWebsocketDownloadImageNode:
     CATEGORY = "oxley"
 
     def download_image_ws(self, ws_url):
-        # Initialize the WebSocket client and connect to the server
-        ws = websocket.create_connection(ws_url)
-
+       
+        # Initialize or get an existing WebSocket client connection
+        ws = self.get_connection(ws_url)
+        
         # Receive a message
         message = ws.recv()
-        ws.close()  # Close the connection once the message is received
-
+        
         try:
             # Attempt to parse the message as JSON
             data = json.loads(message)
@@ -85,6 +101,22 @@ class OxleyWebsocketDownloadImageNode:
         return datetime.now().isoformat()
 
 class OxleyWebsocketPushImageNode:
+    ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
+
+    @classmethod
+    def get_connection(cls, ws_url):
+        """Get an existing WebSocket connection or create a new one."""
+        if ws_url not in cls.ws_connections:
+            cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
+        return cls.ws_connections[ws_url]
+
+    @classmethod
+    def close_connection(cls, ws_url):
+        """Close and remove a WebSocket connection."""
+        if ws_url in cls.ws_connections:
+            cls.ws_connections[ws_url].close()
+            del cls.ws_connections[ws_url]
+            
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -127,21 +159,35 @@ class OxleyWebsocketPushImageNode:
         jpeg_bytes = buffer.getvalue()
         base64_bytes = base64.b64encode(jpeg_bytes)
         base64_string = base64_bytes.decode('utf-8')
-        
-        # Initialize WebSocket client and connect to the server
-        ws = websocket.create_connection(ws_url)
-        
+
+        # Initialize or get an existing WebSocket client connection
+        ws = self.get_connection(ws_url)
+
         # Prepare the message
-        # Note: Customize this part according to your server's expected message format.
         message = json.dumps({"image": base64_string})
-        
+
         # Send the message
         ws.send(message)
-        ws.close()  # Close the connection after sending the message
         
         return ("Image sent successfully",)
 
 class OxleyWebsocketReceiveJsonNode:
+    ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
+
+    @classmethod
+    def get_connection(cls, ws_url):
+        """Get an existing WebSocket connection or create a new one."""
+        if ws_url not in cls.ws_connections:
+            cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
+        return cls.ws_connections[ws_url]
+
+    @classmethod
+    def close_connection(cls, ws_url):
+        """Close and remove a WebSocket connection."""
+        if ws_url in cls.ws_connections:
+            cls.ws_connections[ws_url].close()
+            del cls.ws_connections[ws_url]
+        
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -159,12 +205,11 @@ class OxleyWebsocketReceiveJsonNode:
     CATEGORY = "oxley"
 
     def receive_json_ws(self, ws_url, first_field_name, second_field_name, third_field_name):
-        # Initialize the WebSocket client and connect to the server
-        ws = websocket.create_connection(ws_url)
-
+        # Initialize or get an existing WebSocket client connection
+        ws = self.get_connection(ws_url)
+        
         # Receive a message
         message = ws.recv()
-        ws.close()  # Close the connection once the message is received
 
         try:
             # Attempt to parse the message as JSON
