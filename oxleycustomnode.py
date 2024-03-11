@@ -19,10 +19,14 @@ import websocket
 import json
 from json.decoder import JSONDecodeError
 import base64
+from datetime import datetime, timedelta
 
 class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
 
+    last_execution_time = None
+    execution_interval = timedelta(milliseconds=50)  # Targeting 20 FPS
+    
     @classmethod
     def get_connection(cls, ws_url):
         """Get an existing WebSocket connection or create a new one."""
@@ -93,6 +97,19 @@ class OxleyWebsocketDownloadImageNode:
 
         # Return the PyTorch tensor with the batch dimension added
         return (image_tensor,)
+
+    @classmethod
+    def IS_CHANGED(cls, ws_url):
+        current_time = datetime.now()
+        if cls.last_execution_time is None:
+            # Always trigger on the first check
+            cls.last_execution_time = current_time
+            return current_time.isoformat()
+        elif (current_time - cls.last_execution_time) >= cls.execution_interval:
+            cls.last_execution_time = current_time
+            return current_time.isoformat()
+        else:
+            return None
 
 class OxleyWebsocketPushImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
