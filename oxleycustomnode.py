@@ -132,16 +132,18 @@ class OxleyWebsocketReceiveJsonNode:
         return {
             "required": {
                 "ws_url": ("STRING", {}),  # WebSocket URL to connect to
-                "fields": ("LIST_STRING", {})  # List of fields to extract from the JSON
+                "first_field_name": ("STRING", {}),  # Name of the first field to extract
+                "second_field_name": ("STRING", {}),  # Name of the second field to extract
+                "third_field_name": ("STRING", {})   # Name of the third field to extract
             },
         }
 
-    RETURN_TYPES = ("DICT_STRING",)  # Assuming output as string might be sufficient
-    RETURN_NAMES = ("json_out",)
+    RETURN_TYPES = ("STRING", "STRING", "STRING")
+    RETURN_NAMES = ("first_field_value", "second_field_value", "third_field_value")
     FUNCTION = "receive_json_ws"
     CATEGORY = "oxley"
 
-    def receive_json_ws(self, ws_url, fields):
+    def receive_json_ws(self, ws_url, first_field_name, second_field_name, third_field_name):
         # Initialize the WebSocket client and connect to the server
         ws = websocket.create_connection(ws_url)
 
@@ -155,28 +157,21 @@ class OxleyWebsocketReceiveJsonNode:
         except JSONDecodeError:
             # Handle cases where the message is not valid JSON
             print(f"Received non-JSON message: {message}")
-            return None
-
-        # Initialize an empty dictionary for the output
-        output_data = {}
+            return ("Error: Non-JSON message received", "", "")
 
         # Extract specified fields from the JSON data
-        for field in fields:
-            if field in data:
-                # Add the field value to the output dictionary, convert to string if necessary
-                output_data[field] = str(data[field])
-            else:
-                print(f"Field '{field}' not found in the received message")
+        first_field_value = data.get(first_field_name, "N/A")
+        second_field_value = data.get(second_field_name, "N/A")
+        third_field_value = data.get(third_field_name, "N/A")
 
         # Return the extracted data
-        return (output_data,)
+        return (first_field_value, second_field_value, third_field_value)
 
     @classmethod
-    def IS_CHANGED(cls, ws_url, fields):
-        # Logic to determine if the node should re-execute, potentially based on WebSocket URL changes or fields list changes
+    def IS_CHANGED(cls, ws_url, first_field_name, second_field_name, third_field_name):
+        # Logic to determine if the node should re-execute, potentially based on input changes
         from datetime import datetime
         return datetime.now().isoformat()
-
 
 class OxleyCustomNode:
     @classmethod
