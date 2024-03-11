@@ -100,12 +100,27 @@ class OxleyWebsocketPushImageNode:
     CATEGORY = "oxley"
 
     def push_image_ws(self, image_in, ws_url):
-        # Assuming image_in is a tensor, prepare it for conversion
-        image_np = 255. * image_in.cpu().numpy()  # Convert tensor to numpy array and scale
-        image_np = np.clip(image_np, 0, 255).astype(np.uint8)  # Clip and convert dtype
+        # Assuming image_in is a PyTorch tensor with shape [1, C, H, W] or similar
         
-        # Create a PIL image from the NumPy array
-        img = Image.fromarray(image_np)
+        # Remove unnecessary dimensions and ensure the tensor is CPU-bound
+        image_np = image_in.squeeze().cpu().numpy()
+        
+        # If your tensor has a shape [C, H, W] (common in PyTorch), convert it to [H, W, C]
+        if image_np.ndim == 3 and image_np.shape[0] in {1, 3}:
+            # This assumes a 3-channel (RGB) or 1-channel (grayscale) image.
+            # Adjust the transpose for different formats if necessary.
+            image_np = image_np.transpose(1, 2, 0)
+        
+        # The tensor should now be in a shape compatible with PIL (H, W, C)
+        # For grayscale images (with no color channel), this step isn't necessary.
+        
+        # Convert numpy array to uint8 if not already
+        image_np = np.clip(image_np * 255, 0, 255).astype(np.uint8)
+        
+        try:
+            img = Image.fromarray(image_np)
+        except TypeError as e:
+            raise ValueError(f"Failed to convert array to image: {e}")
 
         buffer = io.BytesIO()
         img.save(buffer, format="JPEG")
