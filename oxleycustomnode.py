@@ -84,6 +84,56 @@ class OxleyWebsocketDownloadImageNode:
         from datetime import datetime
         return datetime.now().isoformat()
 
+class OxleyWebsocketPushImageNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image_tensor": ("TENSOR", {}),  # Input image tensor
+                "ws_url": ("STRING", {}),  # WebSocket URL to push the image to
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)  # Possible return type for confirmation/message
+    RETURN_NAMES = ("status_message",)
+    FUNCTION = "push_image_ws"
+    CATEGORY = "oxley"
+
+    def tensor_to_pil(self, image_tensor):
+        """
+        Convert a PyTorch tensor to a PIL Image.
+        """
+        # Assuming the tensor is in CxHxW format and in the 0-1 range
+        image_tensor = image_tensor.squeeze()  # Remove batch dimension if present
+        image_tensor = image_tensor.mul(255).byte()  # Convert to 0-255 range
+        image = Image.fromarray(image_tensor.cpu().numpy(), 'RGB')  # Convert to PIL Image
+        return image
+
+    def push_image_ws(self, image_tensor, ws_url):
+        # Convert tensor to PIL Image
+        image = self.tensor_to_pil(image_tensor)
+        
+        # Convert PIL Image to JPEG bytes
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG")
+        jpeg_bytes = buffer.getvalue()
+        
+        # Encode JPEG bytes to Base64
+        base64_bytes = base64.b64encode(jpeg_bytes)
+        base64_string = base64_bytes.decode('utf-8')
+        
+        # Initialize WebSocket client and connect to the server
+        ws = websocket.create_connection(ws_url)
+        
+        # Prepare the message (You might want to wrap this in JSON or directly send the Base64 string)
+        message = json.dumps({"image": base64_string})
+        
+        # Send the message
+        ws.send(message)
+        ws.close()  # Close the connection after sending the message
+        
+        return ("Image sent successfully",)
+
 class OxleyWebsocketReceiveJsonNode:
     @classmethod
     def INPUT_TYPES(cls):
