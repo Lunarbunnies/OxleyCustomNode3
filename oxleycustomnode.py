@@ -16,10 +16,23 @@ from PIL import Image
 import numpy as np
 import torch  # Import torch
 import websocket
+from websocket import WebSocketTimeoutException
 import json
 from json.decoder import JSONDecodeError
 import base64
 from datetime import datetime, timedelta
+
+def get_latest_message(ws):
+    latest_message = None
+    try:
+        # Loop to drain any queued messages, keeping the last one
+        while True:
+            message = ws.recv()
+            latest_message = message
+    except WebSocketTimeoutException:
+        pass  # No more messages in the queue
+    return latest_message
+
 
 class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
@@ -58,8 +71,15 @@ class OxleyWebsocketDownloadImageNode:
         ws = self.get_connection(ws_url)
         
         # Receive a message
-        message = ws.recv()
+        # message = ws.recv()
         
+        # Set the WebSocket to non-blocking or with a very short timeout
+        ws.settimeout(0.01)  # Example, adjust based on your library's capabilities
+        
+        message = get_latest_message(ws)
+        if message is None:
+            return None  # No new message to process
+
         try:
             # Attempt to parse the message as JSON
             data = json.loads(message)
