@@ -122,7 +122,7 @@ class OxleyWebsocketPushImageNode:
         except TypeError as e:
             raise ValueError(f"Failed to convert array to image: {e}")
 
-        buffer = io.BytesIO()
+        buffer = BytesIO()
         img.save(buffer, format="JPEG")
         jpeg_bytes = buffer.getvalue()
         base64_bytes = base64.b64encode(jpeg_bytes)
