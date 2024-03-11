@@ -1,17 +1,19 @@
-from .oxleycustomnode import OxleyCustomNode, OxleyDownloadImageNode, OxleyWebsocketDownloadImageNode
+from .oxleycustomnode import OxleyCustomNode, OxleyDownloadImageNode, OxleyWebsocketDownloadImageNode, OxleyWebsocketReceiveJsonNode
 
 # Mapping of node class names to their corresponding classes
 NODE_CLASS_MAPPINGS = {
     "oxleycustomnode": OxleyCustomNode,
     "oxleydownloadimagenode": OxleyDownloadImageNode,
-    "oxleywebsocketdownloadimagenode": OxleyWebsocketDownloadImageNode 
+    "oxleywebsocketdownloadimagenode": OxleyWebsocketDownloadImageNode,
+    "oxleywebsocketreceivejsonnode": OxleyWebsocketReceiveJsonNode 
 }
 
 # Mapping of node class names to their display names in the UI
 NODE_DISPLAY_NAME_MAPPINGS = {
     "oxleycustomnode": "Oxley Image Inverter",
     "oxleydownloadimagenode": "Oxley Image Downloader", 
-    "oxleywebsocketdownloadimagenode": "Oxley Image Websocket Downloader" 
+    "oxleywebsocketdownloadimagenode": "Oxley Image Websocket Downloader", 
+    "oxleywebsocketreceivejsonnode": "Oxley Json Websocket Downloader" 
 }
 
 # List of symbols that are imported when 'from package import *' is used
