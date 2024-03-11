@@ -94,12 +94,6 @@ class OxleyWebsocketDownloadImageNode:
         # Return the PyTorch tensor with the batch dimension added
         return (image_tensor,)
 
-    @classmethod
-    def IS_CHANGED(cls, ws_url):
-        # Logic to determine if the node should re-execute, potentially based on WebSocket URL changes
-        from datetime import datetime
-        return datetime.now().isoformat()
-
 class OxleyWebsocketPushImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
 
