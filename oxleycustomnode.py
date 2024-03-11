@@ -100,16 +100,16 @@ class OxleyWebsocketPushImageNode:
     CATEGORY = "oxley"
 
     def push_image_ws(self, image_in, ws_url):
-        # Ensure the input image is a PIL Image
-        if not isinstance(image_in, Image.Image):
-            raise ValueError("Input must be a PIL Image.")
+        # Assuming image_in is a tensor, prepare it for conversion
+        image_np = 255. * image_in.cpu().numpy()  # Convert tensor to numpy array and scale
+        image_np = np.clip(image_np, 0, 255).astype(np.uint8)  # Clip and convert dtype
         
-        # Convert PIL Image to JPEG bytes
+        # Create a PIL image from the NumPy array
+        img = Image.fromarray(image_np)
+
         buffer = io.BytesIO()
-        image_in.save(buffer, format="JPEG")
+        img.save(buffer, format="JPEG")
         jpeg_bytes = buffer.getvalue()
-        
-        # Encode JPEG bytes to Base64
         base64_bytes = base64.b64encode(jpeg_bytes)
         base64_string = base64_bytes.decode('utf-8')
         
