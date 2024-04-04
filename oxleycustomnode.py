@@ -137,8 +137,13 @@ class OxleyWebsocketPushImageNode:
     @classmethod
     def get_connection(cls, ws_url):
         """Get an existing WebSocket connection or create a new one."""
-        if ws_url not in cls.ws_connections:
-            cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
+        try:
+            if ws_url not in cls.ws_connections or not cls.ws_connections[ws_url].connected:
+                cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
+        except Exception as e:
+            logging.error(f"Error connecting to WebSocket {ws_url}: {e}")
+            # Here, decide whether to retry, raise an exception, or handle the error differently.
+            raise
         return cls.ws_connections[ws_url]
 
     @classmethod
@@ -191,14 +196,25 @@ class OxleyWebsocketPushImageNode:
         base64_bytes = base64.b64encode(jpeg_bytes)
         base64_string = base64_bytes.decode('utf-8')
 
-        # Initialize or get an existing WebSocket client connection
-        ws = self.get_connection(ws_url)
-
-        # Prepare the message
-        message = json.dumps({"image": base64_string})
-
-        # Send the message
-        ws.send(message)
+        try:
+            # Initialize or get an existing WebSocket client connection
+            ws = self.get_connection(ws_url)
+    
+            # Prepare the message
+            message = json.dumps({"image": base64_string})
+    
+            # Send the message
+            ws.send(message)
+            
+            return ("Image sent successfully",)
+        except ssl.SSLError as ssl_error:
+            logging.error(f"SSL error when sending image to {ws_url}: {ssl_error}")
+            self.close_connection(ws_url)  # Close the problematic connection
+            # Handle the error further or retry as needed.
+        except Exception as ex:
+            logging.error(f"An error occurred when sending image to {ws_url}: {ex}")
+            self.close_connection(ws_url)  # Close the problematic connection
+            # Decide how to handle unexpected errors: retry, raise, etc.
         
         return ("Image sent successfully",)
 
