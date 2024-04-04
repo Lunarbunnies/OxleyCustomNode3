@@ -31,6 +31,10 @@ def get_latest_message(ws):
             latest_message = message
     except WebSocketTimeoutException:
         pass  # No more messages in the queue
+    except Exception as e:
+        # General exception handling (optional, based on your error handling strategy)
+        print(f"An error occurred while receiving WebSocket messages: {e}")
+        latest_message = None        
     return latest_message
 
 
@@ -76,47 +80,53 @@ class OxleyWebsocketDownloadImageNode:
         # Set the WebSocket to non-blocking or with a very short timeout
         ws.settimeout(0.01)  # Example, adjust based on your library's capabilities
         
-        message = get_latest_message(ws)
-        if message is None:
-            return None  # No new message to process
+        try:
+            message = get_latest_message(ws)  # Use your custom method for receiving the latest message
+            if message is None:
+                # No new message to process, return a placeholder to maintain a consistent return type
+                return (torch.tensor([]),)  # Returning an empty tensor in a tuple
+        except Exception as e:
+            print(f"Error receiving message: {e}")
+            # On error, also return an empty tensor to maintain consistency
+            return (torch.tensor([]),)  # Returning an empty tensor in a tuple
 
         try:
-            # Attempt to parse the message as JSON
+            # Process the message assuming it's valid JSON
             data = json.loads(message)
         except JSONDecodeError:
-            # Handle cases where the message is not valid JSON
             print(f"Received non-JSON message: {message}")
-            return None
-    
+            # If the message isn't valid JSON, return an empty tensor
+            return (torch.tensor([]),)  # Returning an empty tensor in a tuple
+
         if "image" in data:
-            # Process the message assuming it contains an 'image' field encoded in Base64
             try:
-                # Decode the Base64 image data
+                # Assuming 'image' data is properly formatted
                 image_data = base64.b64decode(data["image"].split(",")[1])
                 image = Image.open(BytesIO(image_data))
+
+                 # Convert the image to RGB format
+                image = image.convert("RGB")
+        
+                # Convert the image to a NumPy array and normalize it
+                image_array = np.array(image).astype(np.float32) / 255.0
+        
+                # Convert the NumPy array to a PyTorch tensor
+                image_tensor = torch.from_numpy(image_array)
+        
+                # Add a new batch dimension at the beginning
+                image_tensor = image_tensor[None,]
+        
+                # Return the PyTorch tensor with the batch dimension added
+                return (image_tensor,)
+        
             except Exception as e:
-                # Handle potential errors in decoding or opening the image
                 print(f"Error processing image data: {e}")
-                return None
+                # On error in processing the image, return an empty tensor
+                return (torch.tensor([]),)  # Returning an empty tensor in a tuple
         else:
-            # Handle cases where the expected 'image' field is not found in the JSON
             print("No image data found in the received message")
-            return None
-
-        # Convert the image to RGB format
-        image = image.convert("RGB")
-
-        # Convert the image to a NumPy array and normalize it
-        image_array = np.array(image).astype(np.float32) / 255.0
-
-        # Convert the NumPy array to a PyTorch tensor
-        image_tensor = torch.from_numpy(image_array)
-
-        # Add a new batch dimension at the beginning
-        image_tensor = image_tensor[None,]
-
-        # Return the PyTorch tensor with the batch dimension added
-        return (image_tensor,)
+            # If there's no image data in the message, return an empty tensor
+            return (torch.tensor([]),)  # Returning an empty tensor in a tuple
 
     @classmethod
     def IS_CHANGED(cls, ws_url):
