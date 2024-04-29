@@ -258,7 +258,7 @@ class OxleyWebsocketReceiveJsonNode:
                 "ws_url": ("STRING", {}),  # WebSocket URL to connect to
                 "first_field_name": ("STRING", {}),  # Name of the first field to extract
                 "second_field_name": ("STRING", {}),  # Name of the second field to extract
-                "third_field_name": ("STRING", {})   # Name of the third field to extract
+                "third_field_name": ("STRING", {}),   # Name of the third field to extract
                 "fourth_field_name": ("STRING", {})   # Name of the fourth field to extract
             },
         }
@@ -268,7 +268,7 @@ class OxleyWebsocketReceiveJsonNode:
     FUNCTION = "receive_json_ws"
     CATEGORY = "oxley"
 
-    def receive_json_ws(self, ws_url, first_field_name, second_field_name, third_field_name):
+    def receive_json_ws(self, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
         # Initialize or get an existing WebSocket client connection
         ws = self.get_connection(ws_url)
         
@@ -281,7 +281,7 @@ class OxleyWebsocketReceiveJsonNode:
         except JSONDecodeError:
             # Handle cases where the message is not valid JSON
             print(f"Received non-JSON message: {message}")
-            return ("Error: Non-JSON message received", "", "")
+            return ("Error: Non-JSON message received", "", "", "")
 
         # Extract specified fields from the JSON data
         first_field_value = data.get(first_field_name, "N/A")
