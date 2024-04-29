@@ -62,7 +62,7 @@ class OxleyWebsocketDownloadImageNode:
     
     # Permute to change the order from HWC to CHW (Height x Width x Channels to Channels x Height x Width)
     # This is necessary because PyTorch expects the channel dimension first.
-    image_tensor = image_tensor.permute(2, 0, 1)
+    #image_tensor = image_tensor.permute(2, 0, 1)
 
     # Add a new batch dimension at the beginning
     placeholder_tensor = image_tensor[None,]  # This keeps the format as NHWC
