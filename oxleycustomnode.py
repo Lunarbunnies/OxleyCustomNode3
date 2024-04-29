@@ -167,7 +167,8 @@ class OxleyWebsocketPushImageNode:
             if ws_url not in cls.ws_connections or not cls.ws_connections[ws_url].connected:
                 cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
         except Exception as e:
-            logging.error(f"Error connecting to WebSocket {ws_url}: {e}")
+            print(f"Error connecting to WebSocket {ws_url}: {e}")
+            # logging.error(f"Error connecting to WebSocket {ws_url}: {e}")
             # Here, decide whether to retry, raise an exception, or handle the error differently.
             raise
         return cls.ws_connections[ws_url]
@@ -234,11 +235,11 @@ class OxleyWebsocketPushImageNode:
             
             return ("Image sent successfully",)
         except ssl.SSLError as ssl_error:
-            logging.error(f"SSL error when sending image to {ws_url}: {ssl_error}")
+            print(f"SSL error when sending image to {ws_url}: {ssl_error}")
             self.close_connection(ws_url)  # Close the problematic connection
             # Handle the error further or retry as needed.
         except Exception as ex:
-            logging.error(f"An error occurred when sending image to {ws_url}: {ex}")
+            print(f"An error occurred when sending image to {ws_url}: {ex}")
             self.close_connection(ws_url)  # Close the problematic connection
             # Decide how to handle unexpected errors: retry, raise, etc.
         
