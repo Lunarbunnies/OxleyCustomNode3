@@ -253,11 +253,12 @@ class OxleyWebsocketReceiveJsonNode:
     
     @classmethod
     def get_connection(cls, ws_url):
-        """Get an existing WebSocket connection or create a new one."""
+        """Ensure a WebSocket connection is established and return it."""
         if ws_url not in cls.ws_connections:
             cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
+            cls.ws_connections[ws_url].settimeout(1)  # Added timeout for non-blocking reads
         return cls.ws_connections[ws_url]
-
+    
     @classmethod
     def close_connection(cls, ws_url):
         """Close and remove a WebSocket connection."""
@@ -283,42 +284,32 @@ class OxleyWebsocketReceiveJsonNode:
     CATEGORY = "oxley"
 
     def receive_json_ws(self, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
-        # Initialize or get an existing WebSocket client connection
         ws = self.get_connection(ws_url)
-        
-        # Receive a message
-        message = ws.recv()
-
         try:
-            # Attempt to parse the message as JSON
+            message = ws.recv()  # Attempt to receive a message
+            if not message:
+                print("No message received.")  # Handles empty messages
+                return ("N/A", "N/A", "N/A", "N/A")
             data = json.loads(message)
-        except JSONDecodeError:
-            # Handle cases where the message is not valid JSON
+            return (
+                data.get(first_field_name, "N/A"),
+                data.get(second_field_name, "N/A"),
+                data.get(third_field_name, "N/A"),
+                data.get(fourth_field_name, "N/A")
+            )
+        except json.JSONDecodeError:
             print(f"Received non-JSON message: {message}")
-            return ("Error: Non-JSON message received", "", "", "")
-
-        # Extract specified fields from the JSON data
-        first_field_value = data.get(first_field_name, "N/A")
-        second_field_value = data.get(second_field_name, "N/A")
-        third_field_value = data.get(third_field_name, "N/A")
-        fourth_field_value = data.get(fourth_field_name, "N/A")
-
-        # Return the extracted data
-        return (first_field_value, second_field_value, third_field_value, fourth_field_value)
+        except Exception as e:
+            print(f"An error occurred while receiving or processing data: {e}")
+        return ("Error: Non-JSON message received", "", "", "")
 
     @classmethod
     def IS_CHANGED(cls, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
         current_time = datetime.now()
-        if cls.last_execution_time is None:
-            # Always trigger on the first check
+        if cls.last_execution_time is None or (current_time - cls.last_execution_time) >= cls.execution_interval:
             cls.last_execution_time = current_time
             return current_time.isoformat()
-        elif (current_time - cls.last_execution_time) >= cls.execution_interval:
-            cls.last_execution_time = current_time
-            return current_time.isoformat()
-        else:
-            return None
-
+        return None
 
 class OxleyCustomNode:
     @classmethod
