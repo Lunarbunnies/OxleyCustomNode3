@@ -45,12 +45,21 @@ class OxleyWebsocketDownloadImageNode:
     last_execution_time = None
     execution_interval = timedelta(milliseconds=50)  # Targeting 20 FPS
 
-    # Generate and store the placeholder image tensor once
-    placeholder_image = Image.new('RGB', (512, 512), color = (73, 109, 137))
+    # Generate and store the placeholder image tensor once to match the image processing pipeline
+    placeholder_image = Image.new('RGB', (320, 240), color=(73, 109, 137))
     draw = ImageDraw.Draw(placeholder_image)
-    draw.text((150, 256), "No Data", fill=(255, 255, 255))
-    placeholder_tensor = torch.from_numpy(np.array(placeholder_image).astype(np.float32) / 255.0).permute(2, 0, 1).unsqueeze(0)
-
+    draw.text((100, 120), "No Data", fill=(255, 255, 255))
+    
+    # Convert the placeholder image to a NumPy array and normalize it
+    placeholder_array = np.array(placeholder_image).astype(np.float32) / 255.0
+    
+    # Convert the NumPy array to a PyTorch tensor
+    placeholder_tensor = torch.from_numpy(placeholder_array)
+    
+    # Change the layout from H x W x C to C x H x W
+    placeholder_tensor = placeholder_tensor.permute(2, 0, 1).unsqueeze(0)  # Add batch dimension
+    
+    
     @classmethod
     def get_placeholder_tensor(cls):
         """Return a pre-generated placeholder tensor."""
@@ -238,6 +247,9 @@ class OxleyWebsocketPushImageNode:
 class OxleyWebsocketReceiveJsonNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
 
+    last_execution_time = None
+    execution_interval = timedelta(milliseconds=100)  # Targeting 10 fetches per second
+    
     @classmethod
     def get_connection(cls, ws_url):
         """Get an existing WebSocket connection or create a new one."""
@@ -295,9 +307,17 @@ class OxleyWebsocketReceiveJsonNode:
 
     @classmethod
     def IS_CHANGED(cls, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
-        # Logic to determine if the node should re-execute, potentially based on input changes
-        from datetime import datetime
-        return datetime.now().isoformat()
+        current_time = datetime.now()
+        if cls.last_execution_time is None:
+            # Always trigger on the first check
+            cls.last_execution_time = current_time
+            return current_time.isoformat()
+        elif (current_time - cls.last_execution_time) >= cls.execution_interval:
+            cls.last_execution_time = current_time
+            return current_time.isoformat()
+        else:
+            return None
+
 
 class OxleyCustomNode:
     @classmethod
