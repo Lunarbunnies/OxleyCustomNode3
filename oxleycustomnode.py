@@ -40,9 +40,20 @@ def get_latest_message(ws):
 
 class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
-
+    
     last_execution_time = None
     execution_interval = timedelta(milliseconds=50)  # Targeting 20 FPS
+
+    # Generate and store the placeholder image tensor once
+    placeholder_image = Image.new('RGB', (512, 512), color = (73, 109, 137))
+    draw = ImageDraw.Draw(placeholder_image)
+    draw.text((150, 256), "No Data", fill=(255, 255, 255))
+    placeholder_tensor = torch.from_numpy(np.array(placeholder_image).astype(np.float32) / 255.0).permute(2, 0, 1).unsqueeze(0)
+
+    @classmethod
+    def get_placeholder_tensor(cls):
+        """Return a pre-generated placeholder tensor."""
+        return cls.placeholder_tensor
     
     @classmethod
     def get_connection(cls, ws_url):
@@ -83,20 +94,17 @@ class OxleyWebsocketDownloadImageNode:
         try:
             message = get_latest_message(ws)  # Use your custom method for receiving the latest message
             if message is None:
-                # No new message to process, return a placeholder to maintain a consistent return type
-                return (torch.tensor([]),)  # Returning an empty tensor in a tuple
+                return (self.get_placeholder_tensor(),)
         except Exception as e:
             print(f"Error receiving message: {e}")
-            # On error, also return an empty tensor to maintain consistency
-            return (torch.tensor([]),)  # Returning an empty tensor in a tuple
+            return (self.get_placeholder_tensor(),)
 
         try:
             # Process the message assuming it's valid JSON
             data = json.loads(message)
         except JSONDecodeError:
             print(f"Received non-JSON message: {message}")
-            # If the message isn't valid JSON, return an empty tensor
-            return (torch.tensor([]),)  # Returning an empty tensor in a tuple
+            return (self.get_placeholder_tensor(),)
 
         if "image" in data:
             try:
@@ -121,12 +129,10 @@ class OxleyWebsocketDownloadImageNode:
         
             except Exception as e:
                 print(f"Error processing image data: {e}")
-                # On error in processing the image, return an empty tensor
-                return (torch.tensor([]),)  # Returning an empty tensor in a tuple
+                return (self.get_placeholder_tensor(),)
         else:
             print("No image data found in the received message")
-            # If there's no image data in the message, return an empty tensor
-            return (torch.tensor([]),)  # Returning an empty tensor in a tuple
+            return (self.get_placeholder_tensor(),)
 
     @classmethod
     def IS_CHANGED(cls, ws_url):
@@ -253,11 +259,12 @@ class OxleyWebsocketReceiveJsonNode:
                 "first_field_name": ("STRING", {}),  # Name of the first field to extract
                 "second_field_name": ("STRING", {}),  # Name of the second field to extract
                 "third_field_name": ("STRING", {})   # Name of the third field to extract
+                "fourth_field_name": ("STRING", {})   # Name of the fourth field to extract
             },
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING")
-    RETURN_NAMES = ("first_field_value", "second_field_value", "third_field_value")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = ("first_field_value", "second_field_value", "third_field_value", "fourth_field_value")
     FUNCTION = "receive_json_ws"
     CATEGORY = "oxley"
 
@@ -280,12 +287,13 @@ class OxleyWebsocketReceiveJsonNode:
         first_field_value = data.get(first_field_name, "N/A")
         second_field_value = data.get(second_field_name, "N/A")
         third_field_value = data.get(third_field_name, "N/A")
+        fourth_field_value = data.get(third_field_name, "N/A")
 
         # Return the extracted data
-        return (first_field_value, second_field_value, third_field_value)
+        return (first_field_value, second_field_value, third_field_value, fourth_field_value)
 
     @classmethod
-    def IS_CHANGED(cls, ws_url, first_field_name, second_field_name, third_field_name):
+    def IS_CHANGED(cls, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
         # Logic to determine if the node should re-execute, potentially based on input changes
         from datetime import datetime
         return datetime.now().isoformat()
