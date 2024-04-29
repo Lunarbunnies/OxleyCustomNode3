@@ -46,27 +46,19 @@ class OxleyWebsocketDownloadImageNode:
     execution_interval = timedelta(milliseconds=50)  # Targeting 20 FPS
 
     # Generate and store the placeholder image tensor once
-    @classmethod
-    def generate_placeholder_tensor(cls):
-        # Create a simple placeholder image
-        image = Image.new('RGB', (320, 240), color=(73, 109, 137))
-        draw = ImageDraw.Draw(image)
-        draw.text((100, 120), "No Data", fill=(255, 255, 255))
+    image = Image.new('RGB', (320, 240), color=(73, 109, 137))
+    draw = ImageDraw.Draw(image)
+    draw.text((100, 120), "No Data", fill=(255, 255, 255))
 
-        # Convert the image to RGB format (redundant here but included for consistency)
-        image = image.convert("RGB")
+    # Convert the image to RGB format (redundant here but included for consistency)
+    image = image.convert("RGB")
 
-        # Normalize the image data by scaling pixel values to be between 0.0 and 1.0
-        image_array = np.array(image).astype(np.float32) / 255.0
+    # Normalize the image data by scaling pixel values to be between 0.0 and 1.0
+    image_array = np.array(image).astype(np.float32) / 255.0
 
-        # Convert the normalized array to a PyTorch tensor and add a batch dimension
-        image_tensor = torch.from_numpy(image_array)
-        image_tensor = image_tensor.permute(2, 0, 1).unsqueeze(0)  # Change HWC to CHW and add batch dimension
-
-        return image_tensor
-
-    # Placeholder tensor is initialized once when the class is loaded
-    placeholder_tensor = generate_placeholder_tensor()
+    # Convert the normalized array to a PyTorch tensor and add a batch dimension
+    image_tensor = torch.from_numpy(image_array)
+    placeholder_tensor = image_tensor.permute(2, 0, 1).unsqueeze(0)  # Change HWC to CHW and add batch dimension
     
     @classmethod
     def get_placeholder_tensor(cls):
@@ -112,17 +104,17 @@ class OxleyWebsocketDownloadImageNode:
         try:
             message = get_latest_message(ws)  # Use your custom method for receiving the latest message
             if message is None:
-                return (self.placeholder_tensor,)
+                return (self.get_placeholder_tensor(),)
         except Exception as e:
             print(f"Error receiving message: {e}")
-            return (self.placeholder_tensor,)
+            return (self.get_placeholder_tensor(),)
 
         try:
             # Process the message assuming it's valid JSON
             data = json.loads(message)
         except JSONDecodeError:
             print(f"Received non-JSON message: {message}")
-            return (self.placeholder_tensor,)
+            return (self.get_placeholder_tensor(),)
 
         if "image" in data:
             try:
@@ -147,10 +139,10 @@ class OxleyWebsocketDownloadImageNode:
         
             except Exception as e:
                 print(f"Error processing image data: {e}")
-                return (self.placeholder_tensor,)
+                return (self.get_placeholder_tensor(),)
         else:
             print("No image data found in the received message")
-            return (self.placeholder_tensor,)
+            return (self.get_placeholder_tensor(),)
 
     @classmethod
     def IS_CHANGED(cls, ws_url):
