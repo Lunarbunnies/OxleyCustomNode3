@@ -12,7 +12,7 @@ sys.path.append(external_packages_path)
 
 import requests
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageDraw
 import numpy as np
 import torch  # Import torch
 import websocket
