@@ -10,6 +10,7 @@ external_packages_path = os.path.join(current_script_dir, 'external_packages')
 # Add this path to sys.path
 sys.path.append(external_packages_path)
 
+import ssl 
 import requests
 from io import BytesIO
 from PIL import Image, ImageDraw
