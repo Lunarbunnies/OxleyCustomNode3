@@ -49,16 +49,27 @@ class OxleyWebsocketDownloadImageNode:
     image = Image.new('RGB', (320, 240), color=(73, 109, 137))
     draw = ImageDraw.Draw(image)
     draw.text((100, 120), "No Data", fill=(255, 255, 255))
-
-    # Convert the image to RGB format (redundant here but included for consistency)
+    
+    # The conversion to RGB is indeed redundant here since the image is already created as RGB.
+    # However, if the image source changes or if this block is used as a template for other images, it ensures consistency.
     image = image.convert("RGB")
-
+    
     # Normalize the image data by scaling pixel values to be between 0.0 and 1.0
     image_array = np.array(image).astype(np.float32) / 255.0
-
-    # Convert the normalized array to a PyTorch tensor and add a batch dimension
+    
+    # Convert the normalized array to a PyTorch tensor
     image_tensor = torch.from_numpy(image_array)
-    placeholder_tensor = image_tensor.permute(2, 0, 1).unsqueeze(0)  # Change HWC to CHW and add batch dimension
+    
+    # Permute to change the order from HWC to CHW (Height x Width x Channels to Channels x Height x Width)
+    # This is necessary because PyTorch expects the channel dimension first.
+    image_tensor = image_tensor.permute(2, 0, 1)
+
+    # Add a new batch dimension at the beginning
+    placeholder_tensor = image_tensor[None,]  # This keeps the format as NHWC
+    
+    # Add a batch dimension at the beginning using unsqueeze, making the shape [1, C, H, W]
+    #placeholder_tensor = image_tensor.unsqueeze(0)
+
     
     @classmethod
     def get_placeholder_tensor(cls):
