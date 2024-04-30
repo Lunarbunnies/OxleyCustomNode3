@@ -36,45 +36,15 @@ def get_latest_message(ws):
     except Exception as e:
         # General exception handling (optional, based on your error handling strategy)
         print(f"An error occurred while receiving WebSocket messages: {e}")
-        latest_message = None        
+        return -1  # Return -1 on exception, indicating an error
+        #latest_message = None        
     return latest_message
 
 class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
     
     last_execution_time = None
-    execution_interval = timedelta(milliseconds=50)  # Targeting 20 FPS
-
-    # Generate and store the placeholder image tensor once
-    image = Image.new('RGB', (320, 240), color=(73, 109, 137))
-    draw = ImageDraw.Draw(image)
-    draw.text((100, 120), "No Data", fill=(255, 255, 255))
-    
-    # The conversion to RGB is indeed redundant here since the image is already created as RGB.
-    # However, if the image source changes or if this block is used as a template for other images, it ensures consistency.
-    image = image.convert("RGB")
-    
-    # Normalize the image data by scaling pixel values to be between 0.0 and 1.0
-    image_array = np.array(image).astype(np.float32) / 255.0
-    
-    # Convert the normalized array to a PyTorch tensor
-    image_tensor = torch.from_numpy(image_array)
-    
-    # Permute to change the order from HWC to CHW (Height x Width x Channels to Channels x Height x Width)
-    # This is necessary because PyTorch expects the channel dimension first.
-    #image_tensor = image_tensor.permute(2, 0, 1)
-
-    # Add a new batch dimension at the beginning
-    placeholder_tensor = image_tensor[None,]  # This keeps the format as NHWC
-    
-    # Add a batch dimension at the beginning using unsqueeze, making the shape [1, C, H, W]
-    #placeholder_tensor = image_tensor.unsqueeze(0)
-
-    
-    @classmethod
-    def get_placeholder_tensor(cls):
-        """Return a pre-generated placeholder tensor."""
-        return cls.placeholder_tensor
+    execution_interval = timedelta(milliseconds=100)  # Targeting 10 FPS
     
     @classmethod
     def get_connection(cls, ws_url):
@@ -127,6 +97,8 @@ class OxleyWebsocketDownloadImageNode:
             message = get_latest_message(ws)
             if message is None:
                 return (self.generate_placeholder_tensor("No message received"),)
+            elif message == -1:
+                return (self.generate_placeholder_tensor("Error in WebSocket communication"),)     
         except Exception as e:
             return (self.generate_placeholder_tensor(f"Error: {e}"),)
 
@@ -249,35 +221,33 @@ class OxleyWebsocketPushImageNode:
         return ("Image sent successfully",)
 
 class OxleyWebsocketReceiveJsonNode:
-    ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
-
+    ws_connections = {}
+    last_known_values = {}
     last_execution_time = None
-    execution_interval = timedelta(milliseconds=1000)  # Targeting 1 fetch per second
+    execution_interval = timedelta(milliseconds=1000)
     
     @classmethod
     def get_connection(cls, ws_url):
-        """Ensure a WebSocket connection is established and return it."""
         if ws_url not in cls.ws_connections:
             cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
-            cls.ws_connections[ws_url].settimeout(0.1)  # Added timeout for non-blocking reads
+            cls.ws_connections[ws_url].settimeout(0.01)
         return cls.ws_connections[ws_url]
-    
+
     @classmethod
     def close_connection(cls, ws_url):
-        """Close and remove a WebSocket connection."""
         if ws_url in cls.ws_connections:
             cls.ws_connections[ws_url].close()
             del cls.ws_connections[ws_url]
-        
+    
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "ws_url": ("STRING", {}),  # WebSocket URL to connect to
-                "first_field_name": ("STRING", {}),  # Name of the first field to extract
-                "second_field_name": ("STRING", {}),  # Name of the second field to extract
-                "third_field_name": ("STRING", {}),   # Name of the third field to extract
-                "fourth_field_name": ("STRING", {})   # Name of the fourth field to extract
+                "ws_url": ("STRING", {}),
+                "first_field_name": ("STRING", {}),
+                "second_field_name": ("STRING", {}),
+                "third_field_name": ("STRING", {}),
+                "fourth_field_name": ("STRING", {})
             },
         }
 
@@ -288,33 +258,36 @@ class OxleyWebsocketReceiveJsonNode:
 
     def receive_json_ws(self, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
         ws = self.get_connection(ws_url)
-        
+        field_names = [first_field_name, second_field_name, third_field_name, fourth_field_name]
         latest_message = None
+        
         try:
-            while True:  # This will continuously check for new messages
+            while True:
                 try:
                     message = ws.recv()
                     if not message:
-                        break  # If no message is received, break the loop
-                    latest_message = message  # Update latest_message with the most recent message
+                        break
+                    latest_message = message
                 except websocket.WebSocketTimeoutException:
-                    break  # No more messages, exit the loop
+                    break
                 except websocket.WebSocketException as e:
                     print(f"WebSocket error: {e}")
-                    break  # Handle possible WebSocket errors by breaking the loop
+                    break
 
             if not latest_message:
-                print("No message received.")
-                return ("N/A", "N/A", "N/A", "N/A")
+                # Return last known values if they exist
+                return tuple(self.last_known_values.get(fn, "N/A") for fn in field_names)
 
-            # Once the loop is done, process the latest_message
             data = json.loads(latest_message)
-            return (
-                data.get(first_field_name, "N/A"),
-                data.get(second_field_name, "N/A"),
-                data.get(third_field_name, "N/A"),
-                data.get(fourth_field_name, "N/A")
-            )
+            # Update last known values
+            for field in field_names:
+                if field in data:
+                    self.last_known_values[field] = data.get(field, "N/A")
+
+            return (self.last_known_values.get(first_field_name, "N/A"),
+                    self.last_known_values.get(second_field_name, "N/A"),
+                    self.last_known_values.get(third_field_name, "N/A"),
+                    self.last_known_values.get(fourth_field_name, "N/A"))
 
         except json.JSONDecodeError:
             print(f"Received non-JSON message: {latest_message}")
@@ -323,7 +296,6 @@ class OxleyWebsocketReceiveJsonNode:
 
         return ("Error: Non-JSON message received", "", "", "")
 
-    
     @classmethod
     def IS_CHANGED(cls, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
         current_time = datetime.now()
