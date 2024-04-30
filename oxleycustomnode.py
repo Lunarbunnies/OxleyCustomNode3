@@ -97,7 +97,8 @@ class OxleyWebsocketDownloadImageNode:
             message = get_latest_message(ws)
             if message is None:
                 return (self.generate_placeholder_tensor("No message received"),)
-            elif message == -1:
+            elif message == -1:               
+                self.close_connection(ws)  # Close the problematic connection
                 return (self.generate_placeholder_tensor("Error in WebSocket communication"),)     
         except Exception as e:
             return (self.generate_placeholder_tensor(f"Error: {e}"),)
