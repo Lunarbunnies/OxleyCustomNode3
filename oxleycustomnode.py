@@ -287,24 +287,42 @@ class OxleyWebsocketReceiveJsonNode:
 
     def receive_json_ws(self, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
         ws = self.get_connection(ws_url)
+        
+        latest_message = None
         try:
-            message = ws.recv()  # Attempt to receive a message
-            if not message:
-                print("No message received.")  # Handles empty messages
+            while True:  # This will continuously check for new messages
+                try:
+                    message = ws.recv()
+                    if not message:
+                        break  # If no message is received, break the loop
+                    latest_message = message  # Update latest_message with the most recent message
+                except websocket.WebSocketTimeoutException:
+                    break  # No more messages, exit the loop
+                except websocket.WebSocketException as e:
+                    print(f"WebSocket error: {e}")
+                    break  # Handle possible WebSocket errors by breaking the loop
+
+            if not latest_message:
+                print("No message received.")
                 return ("N/A", "N/A", "N/A", "N/A")
-            data = json.loads(message)
+
+            # Once the loop is done, process the latest_message
+            data = json.loads(latest_message)
             return (
                 data.get(first_field_name, "N/A"),
                 data.get(second_field_name, "N/A"),
                 data.get(third_field_name, "N/A"),
                 data.get(fourth_field_name, "N/A")
             )
+
         except json.JSONDecodeError:
-            print(f"Received non-JSON message: {message}")
+            print(f"Received non-JSON message: {latest_message}")
         except Exception as e:
-            print(f"An error occurred while receiving or processing data: {e}")
+            print(f"An error occurred while processing data: {e}")
+
         return ("Error: Non-JSON message received", "", "", "")
 
+    
     @classmethod
     def IS_CHANGED(cls, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
         current_time = datetime.now()
