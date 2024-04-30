@@ -10,6 +10,7 @@ external_packages_path = os.path.join(current_script_dir, 'external_packages')
 # Add this path to sys.path
 sys.path.append(external_packages_path)
 
+import select
 import ssl 
 import requests
 from io import BytesIO
@@ -258,7 +259,7 @@ class OxleyWebsocketReceiveJsonNode:
         """Ensure a WebSocket connection is established and return it."""
         if ws_url not in cls.ws_connections:
             cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
-            cls.ws_connections[ws_url].settimeout(1)  # Added timeout for non-blocking reads
+            cls.ws_connections[ws_url].settimeout(0.1)  # Added timeout for non-blocking reads
         return cls.ws_connections[ws_url]
     
     @classmethod
