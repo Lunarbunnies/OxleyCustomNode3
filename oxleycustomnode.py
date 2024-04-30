@@ -38,7 +38,6 @@ def get_latest_message(ws):
         latest_message = None        
     return latest_message
 
-
 class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
     
@@ -101,6 +100,17 @@ class OxleyWebsocketDownloadImageNode:
     FUNCTION = "download_image_ws"
     CATEGORY = "oxley"
 
+    @staticmethod
+    def generate_placeholder_tensor(message="No Data"):
+        """Generate a placeholder image with a custom message."""
+        image = Image.new('RGB', (320, 240), color=(73, 109, 137))
+        draw = ImageDraw.Draw(image)
+        draw.text((100, 120), message, fill=(255, 255, 255))
+        image_array = np.array(image).astype(np.float32) / 255.0
+        image_tensor = torch.from_numpy(image_array)
+        image_tensor = image_tensor[None,]  # Add batch dimension
+        return image_tensor
+    
     def download_image_ws(self, ws_url):
        
         # Initialize or get an existing WebSocket client connection
@@ -113,47 +123,28 @@ class OxleyWebsocketDownloadImageNode:
         ws.settimeout(0.01)  # Example, adjust based on your library's capabilities
         
         try:
-            message = get_latest_message(ws)  # Use your custom method for receiving the latest message
+            message = get_latest_message(ws)
             if message is None:
-                return (self.get_placeholder_tensor(),)
+                return (self.generate_placeholder_tensor("No message received"),)
         except Exception as e:
-            print(f"Error receiving message: {e}")
-            return (self.get_placeholder_tensor(),)
+            return (self.generate_placeholder_tensor(f"Error: {e}"),)
 
         try:
-            # Process the message assuming it's valid JSON
             data = json.loads(message)
+            if "image" not in data:
+                return (self.generate_placeholder_tensor("No image data found"),)
+
+            image_data = base64.b64decode(data["image"].split(",")[1])
+            image = Image.open(BytesIO(image_data))
+            image = image.convert("RGB")
+            image_array = np.array(image).astype(np.float32) / 255.0
+            image_tensor = torch.from_numpy(image_array)
+            image_tensor = image_tensor[None,]
+            return (image_tensor,)
         except JSONDecodeError:
-            print(f"Received non-JSON message: {message}")
-            return (self.get_placeholder_tensor(),)
-
-        if "image" in data:
-            try:
-                # Assuming 'image' data is properly formatted
-                image_data = base64.b64decode(data["image"].split(",")[1])
-                image = Image.open(BytesIO(image_data))
-
-                 # Convert the image to RGB format
-                image = image.convert("RGB")
-        
-                # Convert the image to a NumPy array and normalize it
-                image_array = np.array(image).astype(np.float32) / 255.0
-        
-                # Convert the NumPy array to a PyTorch tensor
-                image_tensor = torch.from_numpy(image_array)
-        
-                # Add a new batch dimension at the beginning
-                image_tensor = image_tensor[None,]
-        
-                # Return the PyTorch tensor with the batch dimension added
-                return (image_tensor,)
-        
-            except Exception as e:
-                print(f"Error processing image data: {e}")
-                return (self.get_placeholder_tensor(),)
-        else:
-            print("No image data found in the received message")
-            return (self.get_placeholder_tensor(),)
+            return (self.generate_placeholder_tensor("Invalid JSON received"),)
+        except Exception as e:
+            return (self.generate_placeholder_tensor(f"Error processing image: {e}"),)
 
     @classmethod
     def IS_CHANGED(cls, ws_url):
