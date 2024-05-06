@@ -57,7 +57,8 @@ class OxleyWebsocketDownloadImageNode:
     def close_connection(cls, ws_url):
         """Close and remove a WebSocket connection."""
         if ws_url in cls.ws_connections:
-            cls.ws_connections[ws_url].close()
+            if cls.ws_connections[ws_url].open:
+                cls.ws_connections[ws_url].close()
             del cls.ws_connections[ws_url]
     
     @classmethod
