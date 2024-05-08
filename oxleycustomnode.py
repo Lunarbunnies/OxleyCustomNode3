@@ -26,19 +26,19 @@ from datetime import datetime, timedelta
 
 def get_latest_message(ws):
     latest_message = None
+    if not ws.sock or not ws.sock.connected:
+        return None  # Immediately return if the connection is closed
     try:
-        # Loop to drain any queued messages, keeping the last one
         while True:
             message = ws.recv()
             latest_message = message
     except WebSocketTimeoutException:
-        pass  # No more messages in the queue
+        pass  # No more messages
     except Exception as e:
-        # General exception handling (optional, based on your error handling strategy)
-        print(f"An error occurred while receiving WebSocket messages: {e}")
-        return -1  # Return -1 on exception, indicating an error
-        #latest_message = None        
+        print(f"Error: {e}")
+        return -1
     return latest_message
+
 
 class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
