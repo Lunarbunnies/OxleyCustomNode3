@@ -24,7 +24,7 @@ from json.decoder import JSONDecodeError
 import base64
 from datetime import datetime, timedelta
 
-def get_latest_message(ws):
+def get_latest_messageOLD(ws):
     latest_message = None
     try:
         while True:
@@ -37,6 +37,22 @@ def get_latest_message(ws):
         return -1  # Return -1 on other exceptions, indicating an error
     return latest_message
 
+def get_latest_message(ws):
+    latest_message = None
+    try:
+        while True:
+            message = ws.recv()
+            latest_message = message
+    except WebSocketTimeoutException:
+        pass  # No more messages, exited the loop normally
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        if ws:
+            ws.close()
+        return -1  # Return -1 on other exceptions, indicating an error
+    return latest_message
+
+
 class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
     
@@ -44,12 +60,28 @@ class OxleyWebsocketDownloadImageNode:
     execution_interval = timedelta(milliseconds=100)  # Targeting 10 FPS
     
     @classmethod
-    def get_connection(cls, ws_url):
+    def get_connectionOLD(cls, ws_url):
         """Get an existing WebSocket connection or create a new one."""
         if ws_url not in cls.ws_connections:
             cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
         return cls.ws_connections[ws_url]
 
+    @classmethod
+    def get_connection(cls, ws_url):
+        """Get an existing WebSocket connection or create a new one, checking for validity."""
+        existing_connection = cls.ws_connections.get(ws_url)
+        if existing_connection and existing_connection.open:
+            return existing_connection
+        else:
+            if existing_connection:
+                existing_connection.close()
+                del cls.ws_connections[ws_url]
+            # Create a new connection if not existing or closed
+            new_connection = websocket.create_connection(ws_url)
+            cls.ws_connections[ws_url] = new_connection
+            return new_connection
+
+    
     @classmethod
     def close_connection(cls, ws_url):
         """Close and remove a WebSocket connection."""
