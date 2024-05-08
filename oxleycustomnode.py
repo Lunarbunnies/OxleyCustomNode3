@@ -70,16 +70,23 @@ class OxleyWebsocketDownloadImageNode:
     def get_connection(cls, ws_url):
         """Get an existing WebSocket connection or create a new one, checking for validity."""
         existing_connection = cls.ws_connections.get(ws_url)
-        if existing_connection and existing_connection.open:
-            return existing_connection
-        else:
-            if existing_connection:
+        if existing_connection:
+            try:
+                # Attempt a non-blocking receive or similar method to check connection.
+                existing_connection.settimeout(0.1)
+                existing_connection.recv()
+                existing_connection.settimeout(None)  # Reset timeout as needed
+                return existing_connection
+            except websocket.WebSocketException:
+                # If an error occurs, assume the connection is closed/bad
                 existing_connection.close()
                 del cls.ws_connections[ws_url]
-            # Create a new connection if not existing or closed
-            new_connection = websocket.create_connection(ws_url)
-            cls.ws_connections[ws_url] = new_connection
-            return new_connection
+    
+        # Create a new connection if not existing or closed
+        new_connection = websocket.create_connection(ws_url)
+        cls.ws_connections[ws_url] = new_connection
+        return new_connection
+
 
     
     @classmethod
