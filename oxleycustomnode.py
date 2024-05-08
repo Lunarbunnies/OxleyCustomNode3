@@ -26,21 +26,18 @@ from datetime import datetime, timedelta
 
 def get_latest_message(ws):
     latest_message = None
-    if not ws.sock or not ws.sock.connected:
-        return None  # Immediately return if the connection is closed
     try:
         while True:
             message = ws.recv()
-            if message:
-                latest_message = message
+            latest_message = message
+    except WebSocketTimeoutException:
+        pass  # No more messages, exited the loop normally
     except WebSocketConnectionClosedException:
         print("WebSocket connection was closed unexpectedly.")
-        return -1
-    except WebSocketTimeoutException:
-        pass  # No more messages, but the loop was exited normally
+        return -1  # Return -1 to indicate that the connection was closed
     except Exception as e:
         print(f"An error occurred: {e}")
-        return -1
+        return -1  # Return -1 on other exceptions, indicating an error
     return latest_message
 
 class OxleyWebsocketDownloadImageNode:
