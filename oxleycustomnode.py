@@ -31,14 +31,17 @@ def get_latest_message(ws):
     try:
         while True:
             message = ws.recv()
-            latest_message = message
+            if message:
+                latest_message = message
+    except WebSocketConnectionClosedException:
+        print("WebSocket connection was closed unexpectedly.")
+        return -1
     except WebSocketTimeoutException:
-        pass  # No more messages
+        pass  # No more messages, but the loop was exited normally
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"An error occurred: {e}")
         return -1
     return latest_message
-
 
 class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
@@ -92,7 +95,7 @@ class OxleyWebsocketDownloadImageNode:
         # message = ws.recv()
         
         # Set the WebSocket to non-blocking or with a very short timeout
-        ws.settimeout(0.01)  # Example, adjust based on your library's capabilities
+        ws.settimeout(0.1)  # Example, adjust based on your library's capabilities
         
         try:
             message = get_latest_message(ws)
