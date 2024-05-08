@@ -32,9 +32,6 @@ def get_latest_message(ws):
             latest_message = message
     except WebSocketTimeoutException:
         pass  # No more messages, exited the loop normally
-    except WebSocketConnectionClosedException:
-        print("WebSocket connection was closed unexpectedly.")
-        return -1  # Return -1 to indicate that the connection was closed
     except Exception as e:
         print(f"An error occurred: {e}")
         return -1  # Return -1 on other exceptions, indicating an error
