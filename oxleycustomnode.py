@@ -80,7 +80,7 @@ class OxleyWebsocketDownloadImageNode:
         """Generate a placeholder image with a custom message."""
         image = Image.new('RGB', (320, 240), color=(73, 109, 137))
         draw = ImageDraw.Draw(image)
-        draw.text((100, 120), message, fill=(255, 255, 255))
+        draw.text((0, 120), message, fill=(255, 255, 255))
         image_array = np.array(image).astype(np.float32) / 255.0
         image_tensor = torch.from_numpy(image_array)
         image_tensor = image_tensor[None,]  # Add batch dimension
