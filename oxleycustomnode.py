@@ -268,7 +268,7 @@ class OxleyWebsocketReceiveJsonNode:
     def get_connection(cls, ws_url):
         if ws_url not in cls.ws_connections:
             cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
-            cls.ws_connections[ws_url].settimeout(0.01)
+            cls.ws_connections[ws_url].settimeout(0.05)
         return cls.ws_connections[ws_url]
 
     @classmethod
