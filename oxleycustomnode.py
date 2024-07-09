@@ -153,15 +153,7 @@ class OxleyWebsocketDownloadImageNode:
 
     @classmethod
     def IS_CHANGED(cls, ws_url, node_id):
-        current_time = datetime.now()
-        if cls.last_execution_time is None:
-            cls.last_execution_time = current_time
-            return current_time.isoformat()
-        elif (current_time - cls.last_execution_time) >= cls.execution_interval:
-            cls.last_execution_time = current_time
-            return current_time.isoformat()
-        else:
-            return None
+        return True
 
 
 class OxleyWebsocketPushImageNode:
