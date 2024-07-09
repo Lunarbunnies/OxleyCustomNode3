@@ -55,21 +55,12 @@ class OxleyAlternatorNode:
         output2 = None
         if OxleyAlternatorNode.counter % 2 == 0:
             output1 = image_in
-            output2 = self.generate_placeholder_tensor()
+            output2 = None
         else:
-            output1 = self.generate_placeholder_tensor()
+            output1 = None
             output2 = image_in
         OxleyAlternatorNode.counter += 1
         return (output1, output2)
-
-    @staticmethod
-    def generate_placeholder_tensor():
-        """Generate a placeholder image."""
-        image = Image.new('RGB', (320, 240), color=(73, 109, 137))
-        image_array = np.array(image).astype(np.float32) / 255.0
-        image_tensor = torch.from_numpy(image_array)
-        image_tensor = image_tensor[None,]  # Add batch dimension
-        return image_tensor
 
 
 class OxleyWebsocketDownloadImageNode:
