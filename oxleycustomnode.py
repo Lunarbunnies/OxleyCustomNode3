@@ -28,17 +28,18 @@ def get_latest_message(ws):
     latest_message = None
     try:
         while True:
-            message = ws.recv()
-            latest_message = message
-    except WebSocketTimeoutException:
-        pass  # No more messages, exited the loop normally
+            try:
+                message = ws.recv()
+                latest_message = message  # Update to the most recent message
+            except WebSocketTimeoutException:
+                break  # Exit loop if no more messages are available
     except Exception as e:
         print(f"An error occurred: {e}")
         if ws:
             ws.close()
         return -1  # Return -1 on other exceptions, indicating an error
     return latest_message
-
+    
 
 class OxleyAlternatorNode:
     counter = 0
@@ -71,9 +72,6 @@ class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by unique key
     global_counter = 0  # Global counter
 
-    last_execution_time = None
-    execution_interval = timedelta(milliseconds=100)  # Targeting 10 FPS
-
     @classmethod
     def get_connection(cls, ws_url, node_id):
         """Get an existing WebSocket connection or create a new one, checking for validity."""
@@ -81,7 +79,7 @@ class OxleyWebsocketDownloadImageNode:
         existing_connection = cls.ws_connections.get(connection_key)
         if existing_connection:
             try:
-                existing_connection.settimeout(1.0)  # Increased timeout to 1 second
+                existing_connection.settimeout(0.1)  # Reduced timeout to 0.1 second
                 existing_connection.recv()
                 existing_connection.settimeout(None)  # Reset timeout as needed
                 return existing_connection
@@ -128,7 +126,7 @@ class OxleyWebsocketDownloadImageNode:
         # Initialize or get an existing WebSocket client connection
         ws = self.get_connection(ws_url, node_id)
 
-        ws.settimeout(1.0)  # Increased timeout to 1 second
+        ws.settimeout(0.1)  # Reduced timeout to 0.1 second
 
         try:
             message = get_latest_message(ws)
@@ -160,7 +158,7 @@ class OxleyWebsocketDownloadImageNode:
     def IS_CHANGED(cls, ws_url, node_id):
         cls.global_counter += 1
         return cls.global_counter  # Always return a unique incrementing counter
-
+        
 
 class OxleyWebsocketPushImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
