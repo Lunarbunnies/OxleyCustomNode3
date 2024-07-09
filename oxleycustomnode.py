@@ -24,19 +24,6 @@ from json.decoder import JSONDecodeError
 import base64
 from datetime import datetime, timedelta
 
-def get_latest_messageOLD(ws):
-    latest_message = None
-    try:
-        while True:
-            message = ws.recv()
-            latest_message = message
-    except WebSocketTimeoutException:
-        pass  # No more messages, exited the loop normally
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return -1  # Return -1 on other exceptions, indicating an error
-    return latest_message
-
 def get_latest_message(ws):
     latest_message = None
     try:
@@ -51,6 +38,41 @@ def get_latest_message(ws):
             ws.close()
         return -1  # Return -1 on other exceptions, indicating an error
     return latest_message
+
+class OxleyAlternatorNode:
+    counter = 0
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {"image_in": ("IMAGE", {})},
+        }
+
+    RETURN_TYPES = ("IMAGE", "IMAGE")
+    RETURN_NAMES = ("image_out1", "image_out2")
+    FUNCTION = "alternate"
+    CATEGORY = "oxley"
+
+    def alternate(self, image_in):
+        output1 = None
+        output2 = None
+        if OxleyAlternatorNode.counter % 2 == 0:
+            output1 = image_in
+            output2 = self.generate_placeholder_tensor()
+        else:
+            output1 = self.generate_placeholder_tensor()
+            output2 = image_in
+        OxleyAlternatorNode.counter += 1
+        return (output1, output2)
+
+    @staticmethod
+    def generate_placeholder_tensor():
+        """Generate a placeholder image."""
+        image = Image.new('RGB', (320, 240), color=(73, 109, 137))
+        image_array = np.array(image).astype(np.float32) / 255.0
+        image_tensor = torch.from_numpy(image_array)
+        image_tensor = image_tensor[None,]  # Add batch dimension
+        return image_tensor
 
 
 class OxleyWebsocketDownloadImageNode:
