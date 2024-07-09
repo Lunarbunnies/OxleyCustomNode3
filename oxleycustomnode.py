@@ -85,7 +85,7 @@ class OxleyWebsocketDownloadImageNode:
         existing_connection = cls.ws_connections.get(connection_key)
         if existing_connection:
             try:
-                existing_connection.settimeout(0.1)
+                existing_connection.settimeout(1.0)  # Increased timeout to 1 second
                 existing_connection.recv()
                 existing_connection.settimeout(None)  # Reset timeout as needed
                 return existing_connection
@@ -132,7 +132,7 @@ class OxleyWebsocketDownloadImageNode:
         # Initialize or get an existing WebSocket client connection
         ws = self.get_connection(ws_url, node_id)
 
-        ws.settimeout(0.1)  # Example, adjust based on your library's capabilities
+        ws.settimeout(1.0)  # Increased timeout to 1 second
 
         try:
             message = get_latest_message(ws)
