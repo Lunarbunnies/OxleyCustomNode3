@@ -54,53 +54,43 @@ def get_latest_message(ws):
 
 
 class OxleyWebsocketDownloadImageNode:
-    ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
-    
+    ws_connections = {}  # Class-level dictionary to store WebSocket connections by unique key
+
     last_execution_time = None
     execution_interval = timedelta(milliseconds=100)  # Targeting 10 FPS
-    
-    @classmethod
-    def get_connectionOLD(cls, ws_url):
-        """Get an existing WebSocket connection or create a new one."""
-        if ws_url not in cls.ws_connections:
-            cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
-        return cls.ws_connections[ws_url]
 
     @classmethod
-    def get_connection(cls, ws_url):
+    def get_connection(cls, ws_url, node_id):
         """Get an existing WebSocket connection or create a new one, checking for validity."""
-        existing_connection = cls.ws_connections.get(ws_url)
+        connection_key = f"{ws_url}_{node_id}"
+        existing_connection = cls.ws_connections.get(connection_key)
         if existing_connection:
             try:
-                # Attempt a non-blocking receive or similar method to check connection.
                 existing_connection.settimeout(0.1)
                 existing_connection.recv()
                 existing_connection.settimeout(None)  # Reset timeout as needed
                 return existing_connection
             except websocket.WebSocketException:
-                # If an error occurs, assume the connection is closed/bad
                 existing_connection.close()
-                del cls.ws_connections[ws_url]
-    
-        # Create a new connection if not existing or closed
+                del cls.ws_connections[connection_key]
+
         new_connection = websocket.create_connection(ws_url)
-        cls.ws_connections[ws_url] = new_connection
+        cls.ws_connections[connection_key] = new_connection
         return new_connection
 
-
-    
     @classmethod
-    def close_connection(cls, ws_url):
+    def close_connection(cls, ws_url, node_id):
         """Close and remove a WebSocket connection."""
-        if ws_url in cls.ws_connections:
-            if cls.ws_connections[ws_url].open:
-                cls.ws_connections[ws_url].close()
-            del cls.ws_connections[ws_url]
-    
+        connection_key = f"{ws_url}_{node_id}"
+        if connection_key in cls.ws_connections:
+            if cls.ws_connections[connection_key].open:
+                cls.ws_connections[connection_key].close()
+            del cls.ws_connections[connection_key]
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
-            "required": {"ws_url": ("STRING", {})},  # WebSocket URL to connect to
+            "required": {"ws_url": ("STRING", {}), "node_id": ("STRING", {})},  # WebSocket URL and Node ID
         }
 
     RETURN_TYPES = ("IMAGE",)
@@ -118,25 +108,19 @@ class OxleyWebsocketDownloadImageNode:
         image_tensor = torch.from_numpy(image_array)
         image_tensor = image_tensor[None,]  # Add batch dimension
         return image_tensor
-    
-    def download_image_ws(self, ws_url):
-       
+
+    def download_image_ws(self, ws_url, node_id):
         # Initialize or get an existing WebSocket client connection
-        ws = self.get_connection(ws_url)
-        
-        # Receive a message
-        # message = ws.recv()
-        
-        # Set the WebSocket to non-blocking or with a very short timeout
+        ws = self.get_connection(ws_url, node_id)
+
         ws.settimeout(0.1)  # Example, adjust based on your library's capabilities
-        
+
         try:
             message = get_latest_message(ws)
             if message is None:
                 return (self.generate_placeholder_tensor("No message received"),)
-            elif message == -1:               
-                # self.close_connection(ws)  # Close the problematic connection
-                return (self.generate_placeholder_tensor("Error in WebSocket communication"),)     
+            elif message == -1:
+                return (self.generate_placeholder_tensor("Error in WebSocket communication"),)
         except Exception as e:
             return (self.generate_placeholder_tensor(f"Error: {e}"),)
 
@@ -158,10 +142,9 @@ class OxleyWebsocketDownloadImageNode:
             return (self.generate_placeholder_tensor(f"Error processing image: {e}"),)
 
     @classmethod
-    def IS_CHANGED(cls, ws_url):
+    def IS_CHANGED(cls, ws_url, node_id):
         current_time = datetime.now()
         if cls.last_execution_time is None:
-            # Always trigger on the first check
             cls.last_execution_time = current_time
             return current_time.isoformat()
         elif (current_time - cls.last_execution_time) >= cls.execution_interval:
@@ -169,6 +152,7 @@ class OxleyWebsocketDownloadImageNode:
             return current_time.isoformat()
         else:
             return None
+
 
 class OxleyWebsocketPushImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by URL
@@ -263,25 +247,28 @@ class OxleyWebsocketReceiveJsonNode:
     last_known_values = {}
     last_execution_time = None
     execution_interval = timedelta(milliseconds=1000)
-    
-    @classmethod
-    def get_connection(cls, ws_url):
-        if ws_url not in cls.ws_connections:
-            cls.ws_connections[ws_url] = websocket.create_connection(ws_url)
-            cls.ws_connections[ws_url].settimeout(0.05)
-        return cls.ws_connections[ws_url]
 
     @classmethod
-    def close_connection(cls, ws_url):
-        if ws_url in cls.ws_connections:
-            cls.ws_connections[ws_url].close()
-            del cls.ws_connections[ws_url]
-    
+    def get_connection(cls, ws_url, node_id):
+        connection_key = f"{ws_url}_{node_id}"
+        if connection_key not in cls.ws_connections:
+            cls.ws_connections[connection_key] = websocket.create_connection(ws_url)
+            cls.ws_connections[connection_key].settimeout(0.05)
+        return cls.ws_connections[connection_key]
+
+    @classmethod
+    def close_connection(cls, ws_url, node_id):
+        connection_key = f"{ws_url}_{node_id}"
+        if connection_key in cls.ws_connections:
+            cls.ws_connections[connection_key].close()
+            del cls.ws_connections[connection_key]
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
                 "ws_url": ("STRING", {}),
+                "node_id": ("STRING", {}),
                 "first_field_name": ("STRING", {}),
                 "second_field_name": ("STRING", {}),
                 "third_field_name": ("STRING", {}),
@@ -294,11 +281,11 @@ class OxleyWebsocketReceiveJsonNode:
     FUNCTION = "receive_json_ws"
     CATEGORY = "oxley"
 
-    def receive_json_ws(self, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
-        ws = self.get_connection(ws_url)
+    def receive_json_ws(self, ws_url, node_id, first_field_name, second_field_name, third_field_name, fourth_field_name):
+        ws = self.get_connection(ws_url, node_id)
         field_names = [first_field_name, second_field_name, third_field_name, fourth_field_name]
         latest_message = None
-        
+
         try:
             while True:
                 try:
@@ -335,12 +322,13 @@ class OxleyWebsocketReceiveJsonNode:
         return ("Error: Non-JSON message received", "", "", "")
 
     @classmethod
-    def IS_CHANGED(cls, ws_url, first_field_name, second_field_name, third_field_name, fourth_field_name):
+    def IS_CHANGED(cls, ws_url, node_id, first_field_name, second_field_name, third_field_name, fourth_field_name):
         current_time = datetime.now()
         if cls.last_execution_time is None or (current_time - cls.last_execution_time) >= cls.execution_interval:
             cls.last_execution_time = current_time
             return current_time.isoformat()
         return None
+
 
 class OxleyCustomNode:
     @classmethod
