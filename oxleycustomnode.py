@@ -25,16 +25,20 @@ import base64
 from datetime import datetime, timedelta
 
 def get_latest_message(ws):
+    latest_message = None
     try:
-        message = ws.recv()
-        return message
+        while True:
+            message = ws.recv()
+            latest_message = message
     except WebSocketTimeoutException:
-        return None  # No message received in the given timeout
+        pass  # No more messages, exited the loop normally
     except Exception as e:
         print(f"An error occurred: {e}")
         if ws:
             ws.close()
         return -1  # Return -1 on other exceptions, indicating an error
+    return latest_message
+
 
 class OxleyAlternatorNode:
     counter = 0
