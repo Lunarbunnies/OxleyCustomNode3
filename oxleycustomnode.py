@@ -65,6 +65,7 @@ class OxleyAlternatorNode:
 
 class OxleyWebsocketDownloadImageNode:
     ws_connections = {}  # Class-level dictionary to store WebSocket connections by unique key
+    global_counter = 0  # Global counter
 
     last_execution_time = None
     execution_interval = timedelta(milliseconds=100)  # Targeting 10 FPS
@@ -153,7 +154,8 @@ class OxleyWebsocketDownloadImageNode:
 
     @classmethod
     def IS_CHANGED(cls, ws_url, node_id):
-        return True
+        cls.global_counter += 1
+        return cls.global_counter  # Always return a unique incrementing counter
 
 
 class OxleyWebsocketPushImageNode:
